@@ -1,0 +1,4 @@
+#jq gitignore files
+tmp.py
+.DS_Store
+.idea/

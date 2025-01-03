@@ -3,7 +3,7 @@ import random
 import fire
 from datasets import load_dataset
 
-from eval_utils.infer_hf_dataset import infer_hf_datasete
+from eval_utils.torch_infer_hf_dataset import infer_hf_datasete
 from eval_utils.metric import calculate_accuracy, extract_boxed_answer
 
 

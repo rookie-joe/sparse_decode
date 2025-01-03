@@ -1,17 +1,17 @@
 #!/bin/bash
-HOME_DIR="/home/lujianqiao/"
+# HOME_DIR="/home/lujianqiao/"
 
 # Set parameters
 BS_DS="AI-MO/aimo-validation-aime"
-SAVE_DS='rookiemango/sparse_decode'
-MODEL_DIR="/DATA/disk2/lujianqiao/models/QwQ-32B-Preview/"
-SAVE_DS_BRANCH="model_QwQ"
-N_SAMPLES=1000000
+SAVE_DS='tworookieman/sparse_decode'
+MODEL_DIR="/opt/tiger/sparse_decode/Qwen2.5-0.5B-Instruct"
+SAVE_DS_BRANCH="model_qwen2.5_0.5b"
+N_SAMPLES=5
 MAX_TOKENS=16384
 
 
 # Run bootstrapping
-cd ${HOME_DIR}/autoformalizer_v2
+# cd ${HOME_DIR}/autoformalizer_v2
 
 
 python3 -m inference \

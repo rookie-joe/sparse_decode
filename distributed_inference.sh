@@ -7,15 +7,16 @@ SAVE_DS='tworookieman/sparse_decode'
 MODEL_DIR="/DATA/disk2/lujianqiao/models/QwQ-32B-Preview"
 #MODEL_DIR="/DATA/disk2/lujianqiao/models/Qwen2.5-0.5B-Instruct"
 SAVE_DS_BRANCH="model_QwQ"
-N_SAMPLES=100000000
+#SAVE_DS_BRANCH="model_test"
+N_SAMPLES=90
 MAX_TOKENS=16384
 
-export CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7,8
+export CUDA_VISIBLE_DEVICES=0,1,2,3
 
 # Launch with accelerate
 accelerate launch \
     --multi_gpu \
-    --num_processes=8 \
+    --num_processes=4 \
     -m distributed_inference \
     --model_path="$MODEL_DIR" \
     --bs_ds="$BS_DS" \

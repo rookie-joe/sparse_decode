@@ -50,10 +50,7 @@ from transformers.utils import (
     replace_return_docstrings,
 )
 from transformers.models.qwen2.configuration_qwen2 import Qwen2Config
-
-if is_flash_attn_2_available():
-    from transformers.modeling_flash_attention_utils import _flash_attention_forward
-
+from infer_utils.flash_attention import default_flash_attention
 
 logger = logging.get_logger(__name__)
 
@@ -405,6 +402,9 @@ class Qwen2FlashAttention2(Qwen2Attention):
         # Beware that with flash_attn<2.1, using q_seqlen != k_seqlen (except for the case q_seqlen == 1) produces a wrong mask (top-left).
         self._flash_attn_uses_top_left_mask = not is_flash_attn_greater_or_equal_2_10()
 
+        # set flash attention as a function of self, so that it can be easily overridden
+        self.flash_attention = default_flash_attention
+
     def forward(
         self,
         hidden_states: torch.Tensor,
@@ -424,9 +424,9 @@ class Qwen2FlashAttention2(Qwen2Attention):
         key_states = self.k_proj(hidden_states)
         value_states = self.v_proj(hidden_states)
 
-        query_states = query_states.view(bsz, q_len, -1, self.head_dim).transpose(1, 2)
-        key_states = key_states.view(bsz, q_len, -1, self.head_dim).transpose(1, 2)
-        value_states = value_states.view(bsz, q_len, -1, self.head_dim).transpose(1, 2)
+        query_states = query_states.view(bsz, q_len, -1, self.head_dim)
+        key_states = key_states.view(bsz, q_len, -1, self.head_dim)
+        value_states = value_states.view(bsz, q_len, -1, self.head_dim)
 
         if position_embeddings is None:
             logger.warning_once(
@@ -439,13 +439,8 @@ class Qwen2FlashAttention2(Qwen2Attention):
         else:
             cos, sin = position_embeddings
         query_states, key_states = apply_rotary_pos_emb(
-            query_states, key_states, cos, sin
+            query_states, key_states, cos, sin, unsqueeze_dim=2
         )
-
-        # Reashape to the expected shape for Flash Attention
-        query_states = query_states.transpose(1, 2)
-        key_states = key_states.transpose(1, 2)
-        value_states = value_states.transpose(1, 2)
 
         if past_key_value is not None:
             cache_kwargs = {
@@ -494,17 +489,18 @@ class Qwen2FlashAttention2(Qwen2Attention):
         else:
             sliding_window = None
 
-        attn_output = _flash_attention_forward(
+        attn_output = self.flash_attention(
             query_states,
             key_states,
             value_states,
-            attention_mask,
-            q_len,
+            attention_mask=attention_mask,
+            query_length=q_len,
             position_ids=position_ids,
             dropout=dropout_rate,
             sliding_window=sliding_window,
             is_causal=self.is_causal,
             use_top_left_mask=self._flash_attn_uses_top_left_mask,
+            model_config=self.config,
         )
 
         attn_output = attn_output.reshape(bsz, q_len, self.hidden_size).contiguous()

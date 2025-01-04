@@ -2,3 +2,5 @@
 tmp.py
 .DS_Store
 .idea/
+tmp/
+__pycache__/

@@ -1,9 +1,11 @@
 # -*- encoding: utf-8 -*-
-import torch
-import tqdm
 import time
 from typing import List, Optional
+
+import torch
+import tqdm
 from transformers import PreTrainedModel, PreTrainedTokenizer
+
 from infer_utils.kv_cache import DynamicCache
 
 
@@ -243,10 +245,13 @@ def infer(
             add_generation_prompt=True,
             return_tensors="pt",
         ).to(model.device)
-    except:
+
+    except (TypeError, ValueError) as e:
+        print(f"catch error ：{e}")
         input_ids = tokenizer(
             prompt, return_tensors="pt", return_attention_mask=False
         ).input_ids.to(model.device)
+
     if not stream:
         # generate new token ids
         generate_dict = generate(
@@ -322,10 +327,10 @@ def batch_infer(
 ):
     kv_cache = None
     tokens_per_sec = 0
-    # pbar = tqdm.tqdm(total=len(prompt), disable=not verbose, desc="Batch Infer")
+    pbar = tqdm.tqdm(total=len(prompt), disable=not verbose, desc="Batch Infer")
     outputs = []
     for p in prompt:
-        # pbar.set_postfix({"tokens_per_sec": f"{tokens_per_sec:.2f}"})
+        pbar.set_postfix({"tokens_per_sec": f"{tokens_per_sec:.2f}"})
         start_time = time.time()
         result = infer(
             model=model,
@@ -345,6 +350,6 @@ def batch_infer(
         kv_cache = result.pop("kv_cache")
         tokens_per_sec = result["output_len"] / (end_time - start_time)
         outputs.append(result)
-    #     pbar.update(1)
-    # pbar.close()
+        pbar.update(1)
+    pbar.close()
     return outputs

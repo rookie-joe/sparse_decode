@@ -1,11 +1,17 @@
+import os
 import random
 
 import fire
 from accelerate import Accelerator
 from datasets import load_dataset
 
-from eval_utils.metric import calculate_accuracy, extract_boxed_answer
 from eval_utils.torch_distributed_infer_hdf_dataset import distributed_infer_dataset
+
+# Set NCCL configurations
+os.environ["NCCL_BLOCKING_WAIT"] = "1"  # Use blocking wait
+# Set timeout to 24 hours (86400 seconds)
+os.environ["NCCL_TIMEOUT"] = "86400"  # 24 hours
+os.environ["NCCL_DEBUG"] = "INFO"  # Enable NCCL debugging
 
 
 def generate(
@@ -17,6 +23,8 @@ def generate(
     temperature: float = 0.0,
     max_tokens: int = 4096,
     batch_size: int = 32,
+    sparse_decode_method: str = "vanilla",
+    sparse_decode_config: str = "",
 ):
     """
     Distributed generation and evaluation function
@@ -49,44 +57,16 @@ def generate(
         model_path=model_path,
         dataset_id=save_ds,
         dataset_branch=save_ds_branch,
+        output_base_dir="local_results" + save_ds_branch,
         output_dataset_id=save_ds,
         output_dataset_branch=save_ds_branch,
         n_samples=1,
         temperature=temperature,
         max_tokens=max_tokens,
         batch_size=batch_size,
+        sparse_decode_method=sparse_decode_method,
+        sparse_decode_config=sparse_decode_config,
     )
-
-    # Only main process handles results and metrics
-    if accelerator.is_main_process:
-        # Load results and calculate metrics
-        ds_with_results = load_dataset(save_ds, split="train", revision=save_ds_branch)
-
-        # Extract answers and calculate accuracy
-        processed_dataset = ds_with_results.map(
-            extract_boxed_answer,
-            batched=True,
-            batch_size=batch_size,
-        )
-
-        accuracy = calculate_accuracy(
-            ground_truth=processed_dataset["answer"],
-            predicted=processed_dataset["extracted_answers"],
-        )
-
-        # Format and push results
-        accuracy_percentage = f"{accuracy * 100:.2f}%"
-        commit_message = f"Updated dataset with extracted boxed answers (Accuracy: {accuracy_percentage})"
-
-        processed_dataset.push_to_hub(
-            save_ds,
-            revision=save_ds_branch,
-            private=True,
-            commit_message=commit_message,
-        )
-
-    # Wait for all processes to complete
-    accelerator.wait_for_everyone()
 
 
 if __name__ == "__main__":

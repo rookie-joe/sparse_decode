@@ -1,0 +1,7 @@
+{
+    "pq_m": 2,
+    "pq_k": 8,
+    "top_k": 4096,
+    "local_window" : 128,
+    "global_window" : 128
+}

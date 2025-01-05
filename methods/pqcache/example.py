@@ -9,7 +9,7 @@ from transformers import AutoTokenizer
 
 from infer_utils.infer import infer
 from infer_utils.modeling_qwen2 import Qwen2ForCausalLM
-from methods.quest.patch import patch_model
+from methods.pqcache.patch import patch_model
 
 
 def setup_logging(level=logging.INFO):
@@ -43,7 +43,7 @@ if __name__ == "__main__":
     patch_model(
         llm,
         max_new_tokens=1024,
-        sparse_decode_config="methods/quest/config/1_10_sparse.json",
+        sparse_decode_config="methods/pqcache/config/default_config.json",
         verbose=True,
     )
 
